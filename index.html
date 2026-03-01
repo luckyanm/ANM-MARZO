@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generatore QR ANM</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --bg-dark: #0f172a;
+            --surface: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --border: #334155;
+            --radius: 12px;
+            --transition: all 0.3s ease;
+        }
+
+        :root.light-mode {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-dark: #f8fafc;
+            --surface: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --danger: #dc2626;
+            --success: #15803d;
+            --border: #cbd5e1;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 2rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+            text-align: center;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="url"] {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .timer {
+            color: var(--success);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .timer.danger {
+            color: var(--danger);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        button.primary {
+            width: 100%;
+            padding: 0.875rem;
+            border-radius: 8px;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        button.primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            background: var(--border);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results {
+            margin-top: 2rem;
+            display: none;
+        }
+
+        .results.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .qr-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .qr-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            transition: var(--transition);
+            text-decoration: none;
+            color: var(--text-main);
+        }
+
+        .qr-item:hover {
+            border-color: var(--primary);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .qr-item-name {
+            font-weight: 500;
+        }
+
+        .qr-item-icon {
+            color: var(--primary);
+        }
+
+        .error-message {
+            color: var(--danger);
+            margin-top: 1rem;
+            text-align: center;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        button.secondary {
+            flex: 1;
+            padding: 0.75rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        button.secondary:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .loader {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div
+            style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 0.5rem;">
+            <h1 id="mainTitle" style="margin-bottom: 0; user-select: none;"
+                title="Doppio clic per azzerare il contatore">Generatore QR ANM</h1>
+            <button id="themeToggleBtn"
+                style="background: transparent; border: none; cursor: pointer; color: var(--text-muted);"
+                title="Cambia Tema">
+                <!-- Moon icon -->
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+            </button>
+        </div>
+        <p class="subtitle">Genera codici in tempo reale ad alta efficienza</p>
+
+        <div class="stats-row">
+            <div class="stat">
+                <span class="stat-label">Utilizzi (Max 10)</span>
+                <span class="stat-value" id="counterDisplay">0 / 10</span>
+            </div>
+            <div class="stat" style="align-items: flex-end;">
+                <span class="stat-label">Scadenza QR</span>
+                <span class="stat-value timer" id="timerDisplay">--:--</span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="workerUrl">URL Cloudflare Worker</label>
+            <input type="url" id="workerUrl" placeholder="https://tuo-worker.workers.dev" required>
+        </div>
+
+
+
+        <button class="primary" id="generateBtn">
+            <span id="btnText">Genera QR Aggiornati</span>
+            <div class="loader" id="btnLoader"></div>
+        </button>
+
+        <div id="errorMsg" class="error-message"></div>
+
+        <div class="results" id="resultsArea">
+            <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Codici Generati</h3>
+            <div class="qr-list" id="qrList">
+                <!-- QR Items will be injected here -->
+            </div>
+
+            <div class="actions">
+                <button class="secondary" id="copyAllBtn">Copia Tutti i Link</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const limitMax = 10;
+        let counter = parseInt(localStorage.getItem('anm_qr_counter') || '0');
+        let countdownInterval = null;
+        let qrLinks = [];
+
+        const UI = {
+            counter: document.getElementById('counterDisplay'),
+            timer: document.getElementById('timerDisplay'),
+            btn: document.getElementById('generateBtn'),
+            btnText: document.getElementById('btnText'),
+            loader: document.getElementById('btnLoader'),
+            error: document.getElementById('errorMsg'),
+            results: document.getElementById('resultsArea'),
+            list: document.getElementById('qrList'),
+            workerUrl: document.getElementById('workerUrl'),
+            copyAllBtn: document.getElementById('copyAllBtn'),
+            themeToggleBtn: document.getElementById('themeToggleBtn'),
+            mainTitle: document.getElementById('mainTitle')
+        };
+
+        // Theme initialization
+        if (localStorage.getItem('anm_theme') === 'light') {
+            document.documentElement.classList.add('light-mode');
+        }
+
+        UI.themeToggleBtn.addEventListener('click', () => {
+            document.documentElement.classList.toggle('light-mode');
+            const isLight = document.documentElement.classList.contains('light-mode');
+            localStorage.setItem('anm_theme', isLight ? 'light' : 'dark');
+        });
+
+        // Hidden reset counter logic
+        UI.mainTitle.addEventListener('dblclick', () => {
+            const pwd = prompt("Inserisci password per azzerare il contatore:");
+            if (pwd === "reset123") {
+                counter = 0;
+                localStorage.setItem('anm_qr_counter', '0');
+                updateCounterUI();
+                UI.btn.disabled = false;
+                hideError();
+                alert("Contatore azzerato con successo!");
+            }
+        });
+
+        // Initialize state
+        updateCounterUI();
+        checkLimit();
+
+        // Restore worker URL if saved
+        // 👇 PASSAGGIO 2 DELLA GUIDA: SOSTITUISCI IL LINK QUI SOTTO CON QUELLO DEL TUO WORKER CLOUDFLARE
+        UI.workerUrl.value = localStorage.getItem('anm_worker_url') || '  https://anm-qr-web.documenticsq.workers.dev';
+
+        function updateCounterUI() {
+            UI.counter.textContent = `${counter} / ${limitMax}`;
+        }
+
+        function checkLimit() {
+            if (counter >= limitMax) {
+                UI.btn.disabled = true;
+                showError("Hai raggiunto il limite massimo di generazioni (10).");
+                return true;
+            }
+            return false;
+        }
+
+        function showError(msg) {
+            UI.error.textContent = msg;
+            UI.error.style.display = 'block';
+        }
+
+        function hideError() {
+            UI.error.style.display = 'none';
+        }
+
+        function startTimer() {
+            if (countdownInterval) clearInterval(countdownInterval);
+
+            let timeRemaining = 120; // 2 minutes in seconds
+            UI.timer.classList.remove('danger');
+
+            const updateTimerDisplay = () => {
+                const mins = Math.floor(timeRemaining / 60).toString().padStart(2, '0');
+                const secs = (timeRemaining % 60).toString().padStart(2, '0');
+                UI.timer.textContent = `${mins}:${secs}`;
+
+                if (timeRemaining <= 10) {
+                    UI.timer.classList.add('danger');
+                }
+            };
+
+            updateTimerDisplay();
+
+            countdownInterval = setInterval(() => {
+                timeRemaining--;
+                if (timeRemaining < 0) {
+                    clearInterval(countdownInterval);
+                    UI.timer.textContent = "SCADUTO";
+                    return;
+                }
+                updateTimerDisplay();
+            }, 1000);
+        }
+
+        function parseQRLines(text) {
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            const links = [];
+
+            for (const line of lines) {
+                // Expecting "Variante X - Y cm: https://..." or similar
+                // Let's just extract the URL and the label before it
+                const match = line.match(/^(.*?):\s*(https?:\/\/[^\s]+)$/);
+                if (match) {
+                    links.push({ name: match[1].trim(), url: match[2].trim() });
+                } else if (line.startsWith('http')) {
+                    links.push({ name: "QR Link", url: line });
+                }
+            }
+            return links;
+        }
+
+        function renderLinks(links) {
+            UI.list.innerHTML = '';
+            qrLinks = links;
+
+            links.forEach(link => {
+                const a = document.createElement('a');
+                a.href = link.url;
+                a.target = "_blank";
+                a.className = "qr-item";
+                a.innerHTML = `
+                    <span class="qr-item-name">${link.name}</span>
+                    <svg class="qr-item-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                `;
+                UI.list.appendChild(a);
+            });
+
+            UI.results.classList.add('active');
+        }
+
+        UI.copyAllBtn.addEventListener('click', async () => {
+            if (qrLinks.length === 0) return;
+            const textToCopy = qrLinks.map(l => `${l.name}:\n${l.url}`).join('\n\n');
+            try {
+                await navigator.clipboard.writeText(textToCopy);
+                const originalText = UI.copyAllBtn.textContent;
+                UI.copyAllBtn.textContent = "Copiati!";
+                setTimeout(() => UI.copyAllBtn.textContent = originalText, 2000);
+            } catch (err) {
+                console.error('Failed to copy', err);
+                alert("Errore durante la copia negli appunti.");
+            }
+        });
+
+        UI.btn.addEventListener('click', async () => {
+            if (checkLimit()) return;
+
+            const workerUrl = UI.workerUrl.value.trim();
+
+            if (!workerUrl) {
+                showError("Inserisci l'URL del Worker.");
+                return;
+            }
+
+            // Save to localStorage
+            localStorage.setItem('anm_worker_url', workerUrl);
+
+            hideError();
+            UI.btn.disabled = true;
+            UI.btnText.textContent = "Generazione in corso...";
+            UI.loader.style.display = "block";
+            UI.results.classList.remove('active');
+
+            try {
+                const response = await fetch(workerUrl, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error(text || "Errore dal server");
+                }
+
+                const resultText = await response.text();
+                const links = parseQRLines(resultText);
+
+                if (links.length === 0) {
+                    throw new Error("Nessun link valido ricevuto dal server.");
+                }
+
+                // Increment counter
+                counter++;
+                localStorage.setItem('anm_qr_counter', counter.toString());
+                updateCounterUI();
+
+                renderLinks(links);
+                startTimer();
+
+            } catch (err) {
+                console.error(err);
+                showError(`Errore imprevisto: ${err.message}`);
+            } finally {
+                UI.btn.disabled = false;
+                UI.btnText.textContent = "Genera QR Aggiornati";
+                UI.loader.style.display = "none";
+                checkLimit();
+            }
+        });
+    </script>
+</body>
+
+</html>
